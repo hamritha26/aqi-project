@@ -24,13 +24,13 @@ target = "AQI"
 df = data.dropna(subset=features + [target])
 
 # ---------------- TABS ----------------
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 Overview",
     "🏙 City Analysis",
     "🤖 ML Model",
-    "🔮 Prediction"
+    "🔮 Prediction",
+    "🌆 City Comparison"
 ])
-
 # ================= TAB 1: OVERVIEW =================
 with tab1:
     st.header("📊 Dataset Overview")
@@ -146,3 +146,48 @@ with tab4:
         fig, ax = plt.subplots()
         ax.bar(["Original AQI", "Predicted AQI"], [original_aqi, predicted_aqi])
         st.pyplot(fig)
+        # ================= TAB 5: CITY COMPARISON =================
+with tab5:
+    st.header("🌆 City Comparison Analysis")
+
+    selected_cities = st.multiselect(
+        "Select Cities to Compare",
+        data["City"].unique()
+    )
+
+    if len(selected_cities) < 2:
+        st.warning("Please select at least 2 cities")
+    else:
+        compare_data = data[data["City"].isin(selected_cities)]
+
+        st.subheader("📊 AQI Comparison")
+
+        fig, ax = plt.subplots()
+
+        colors = ["red", "blue", "green", "orange", "purple", "brown"]
+
+for i, city in enumerate(selected_cities):
+    city_df = compare_data[compare_data["City"] == city]
+    ax.plot(city_df["AQI"], label=city, color=colors[i % len(colors)])
+
+        ax.set_title("AQI Comparison Between Cities")
+        ax.legend()
+        st.pyplot(fig)
+
+        st.subheader("📈 Average AQI Comparison")
+
+        avg_aqi = compare_data.groupby("City")["AQI"].mean()
+        st.bar_chart(avg_aqi)
+
+        with st.expander("🌫 Compare Pollutants"):
+            pollutant = st.selectbox("Select Pollutant", features)
+
+            fig, ax = plt.subplots()
+
+           for i, city in enumerate(selected_cities):
+    city_df = compare_data[compare_data["City"] == city]
+    ax.plot(city_df[pollutant], label=city, color=colors[i % len(colors)])
+
+            ax.set_title(f"{pollutant} Comparison")
+            ax.legend()
+            st.pyplot(fig)

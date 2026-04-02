@@ -9,18 +9,54 @@ st.set_page_config(page_title="Urban AQI Dashboard", layout="wide")
 
 st.title("🌍 Urban AQI Prediction Dashboard")
 
-# Load data
+# -----------------------------
+# LOAD DATA
+# -----------------------------
 data = pd.read_csv("city_day.csv")
 
-# Sidebar filter
-st.sidebar.header("Filter Data")
-city = st.sidebar.selectbox("Select City", data["City"].unique())
+# -----------------------------
+# SIDEBAR - CITY SELECTION
+# -----------------------------
+st.sidebar.header("📍 Select City")
+city = st.sidebar.selectbox("Choose City", data["City"].unique())
 
 filtered_data = data[data["City"] == city]
 
-# Show dataset
-st.subheader("📊 Dataset (Filtered)")
-st.write(filtered_data.head(50))
+st.header(f"📊 Complete AQI Analysis for {city}")
+
+# -----------------------------
+# KEY METRICS
+# -----------------------------
+st.subheader("📌 Key Insights")
+
+col1, col2, col3 = st.columns(3)
+
+col1.metric("Average AQI", round(filtered_data["AQI"].mean(), 2))
+col2.metric("Max AQI", round(filtered_data["AQI"].max(), 2))
+col3.metric("Min AQI", round(filtered_data["AQI"].min(), 2))
+
+# -----------------------------
+# AQI TREND GRAPH
+# -----------------------------
+st.subheader("📈 AQI Trend Over Time")
+
+if "Date" in filtered_data.columns:
+    filtered_data["Date"] = pd.to_datetime(filtered_data["Date"])
+    filtered_data = filtered_data.sort_values("Date")
+
+    st.line_chart(filtered_data.set_index("Date")["AQI"])
+
+# -----------------------------
+# POLLUTANT ANALYSIS
+# -----------------------------
+st.subheader("🏭 Pollutant Levels")
+
+pollutants = ["PM2.5", "PM10", "NO2", "CO", "SO2"]
+available = [p for p in pollutants if p in filtered_data.columns]
+
+if available:
+    avg_values = filtered_data[available].mean()
+    st.bar_chart(avg_values)
 
 # -----------------------------
 # CORRELATION HEATMAP
@@ -76,7 +112,7 @@ st.write(results)
 st.bar_chart(results.set_index("Model"))
 
 # -----------------------------
-# PREDICTION SECTION
+# PREDICTION
 # -----------------------------
 st.subheader("🔮 Predict AQI")
 
@@ -96,12 +132,24 @@ if st.button("Predict"):
     st.success(f"Predicted AQI: {prediction[0]:.2f}")
 
 # -----------------------------
+# AI INSIGHT
+# -----------------------------
+st.subheader("🧠 AI Insight")
+
+if filtered_data["AQI"].mean() > 200:
+    st.error("Air quality is Poor 🚨")
+elif filtered_data["AQI"].mean() > 100:
+    st.warning("Air quality is Moderate ⚠️")
+else:
+    st.success("Air quality is Good ✅")
+
+# -----------------------------
 # CONCLUSION
 # -----------------------------
 st.subheader("📌 Conclusion")
 
 st.write("""
-- AQI is highly influenced by pollutants like PM2.5  
-- Random Forest gives better accuracy  
-- This dashboard helps visualize and predict AQI effectively  
+- AQI is influenced by pollutants like PM2.5 and PM10  
+- Random Forest performs better than Linear Regression  
+- This dashboard provides city-wise AQI insights and prediction  
 """)

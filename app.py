@@ -3,67 +3,79 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import r2_score
 
-st.set_page_config(page_title="AQI Data Science Dashboard", layout="wide")
+# ------------------ PAGE CONFIG ------------------
+st.set_page_config(page_title="AQI Dashboard", layout="wide")
 
-# -----------------------------
-# LOAD DATA
-# -----------------------------
+st.title("🌍 Urban AQI Analysis & Prediction Dashboard")
+
+# ------------------ LOAD DATA ------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("city_day.csv")
+    data = pd.read_csv("city_day.csv")
+    return data
 
 data = load_data()
 
-# -----------------------------
-# SIDEBAR
-# -----------------------------
-st.sidebar.title("🌍 Navigation")
-
-page = st.sidebar.radio("Select Module", [
-    "🏠 Overview",
-    "📊 EDA",
-    "📍 Single City",
-    "🌆 Multi City",
-    "🤖 ML Training",
-    "📈 Model Evaluation",
-    "🔮 Prediction"
+# ------------------ SIDEBAR ------------------
+st.sidebar.title("📌 Navigation")
+section = st.sidebar.radio("Go to", [
+    "📊 Overview",
+    "🏙 City Analysis",
+    "📈 Correlation",
+    "🤖 ML Models",
+    "🔮 Prediction Simulator"
 ])
 
-# -----------------------------
-# OVERVIEW
-# -----------------------------
-if page == "🏠 Overview":
-    st.title("🌍 AQI Data Science Dashboard")
+# ------------------ COMMON FEATURES ------------------
+features = ["PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3", "Toluene"]
+target = "AQI"
 
-    st.write("### Dataset Summary")
-    st.write(data.head())
+df = data.dropna()
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Records", len(data))
-    col2.metric("Cities", data["City"].nunique())
-    col3.metric("Avg AQI", round(data["AQI"].mean(), 2))
+# ------------------ OVERVIEW ------------------
+if section == "📊 Overview":
+    st.header("📊 Dataset Overview")
 
-# -----------------------------
-# EDA
-# -----------------------------
-elif page == "📊 EDA":
-    st.title("📊 Exploratory Data Analysis")
+    st.subheader("Sample Data")
+    st.dataframe(data.head())
 
-    st.subheader("Dataset")
-    st.write(data)
+    st.subheader("City Distribution")
+    st.bar_chart(data["City"].value_counts())
 
-    st.subheader("Missing Values")
-    st.write(data.isnull().sum())
+# ------------------ CITY ANALYSIS ------------------
+elif section == "🏙 City Analysis":
+    st.header("🏙 Single City Analysis")
 
-    st.subheader("Correlation Heatmap")
-    numeric = data.select_dtypes(include=np.number)
-    corr = numeric.corr()
+    city = st.selectbox("Select City", data["City"].unique())
 
+    city_data = data[data["City"] == city]
+
+    st.subheader(f"📍 Data for {city}")
+    st.dataframe(city_data.tail())
+
+    st.subheader("📈 AQI Trend")
+    fig, ax = plt.subplots()
+    ax.plot(city_data["AQI"])
+    ax.set_title(f"AQI Trend for {city}")
+    st.pyplot(fig)
+
+    st.subheader("🌫 Pollutant Levels")
+    st.line_chart(city_data[features])
+
+# ------------------ CORRELATION ------------------
+elif section == "📈 Correlation":
+    st.header("📈 Correlation Analysis")
+
+    corr = df[features + [target]].corr()
+
+    st.subheader("Correlation Matrix")
+    st.dataframe(corr)
+
+    st.subheader("Heatmap")
     fig, ax = plt.subplots()
     cax = ax.matshow(corr)
     plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
@@ -71,110 +83,85 @@ elif page == "📊 EDA":
     fig.colorbar(cax)
     st.pyplot(fig)
 
-# -----------------------------
-# SINGLE CITY
-# -----------------------------
-elif page == "📍 Single City":
-    city = st.selectbox("Select City", data["City"].unique())
-    df = data[data["City"] == city]
+# ------------------ ML MODELS ------------------
+elif section == "🤖 ML Models":
+    st.header("🤖 Model Training & Evaluation")
 
-    st.title(f"📍 {city} Analysis")
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Avg AQI", round(df["AQI"].mean(), 2))
-    col2.metric("Max AQI", round(df["AQI"].max(), 2))
-    col3.metric("Min AQI", round(df["AQI"].min(), 2))
-
-    st.line_chart(df["AQI"])
-
-# -----------------------------
-# MULTI CITY
-# -----------------------------
-elif page == "🌆 Multi City":
-    cities = st.multiselect("Select Cities", data["City"].unique())
-
-    if cities:
-        df = data[data["City"].isin(cities)]
-        st.bar_chart(df.groupby("City")["AQI"].mean())
-
-# -----------------------------
-# ML TRAINING
-# -----------------------------
-elif page == "🤖 ML Training":
-
-    st.title("🤖 Train Models")
-
-    df = data.dropna(subset=["PM2.5", "AQI"])
-    X = df[["PM2.5"]]
-    y = df["AQI"]
+    X = df[features]
+    y = df[target]
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
-    model_choice = st.selectbox("Choose Model", [
-        "Linear Regression",
-        "Decision Tree",
-        "Random Forest"
-    ])
+    model = RandomForestRegressor()
+    model.fit(X_train, y_train)
 
-    if st.button("Train Model"):
+    preds = model.predict(X_test)
 
-        if model_choice == "Linear Regression":
-            model = LinearRegression()
+    score = r2_score(y_test, preds)
 
-        elif model_choice == "Decision Tree":
-            model = DecisionTreeRegressor()
+    st.subheader("📊 Model Performance")
+    st.success(f"R2 Score: {score:.2f}")
 
-        else:
-            model = RandomForestRegressor()
+    st.subheader("📈 Actual vs Predicted")
+    fig, ax = plt.subplots()
+    ax.scatter(y_test, preds)
+    ax.set_xlabel("Actual AQI")
+    ax.set_ylabel("Predicted AQI")
+    st.pyplot(fig)
 
-        model.fit(X_train, y_train)
+# ------------------ PREDICTION SIMULATOR ------------------
+elif section == "🔮 Prediction Simulator":
+    st.header("🔮 AQI Prediction Simulator")
 
-        score = model.score(X_test, y_test)
+    # Train model
+    X = df[features]
+    y = df[target]
 
-        st.success(f"{model_choice} R2 Score: {round(score, 3)}")
+    model = RandomForestRegressor()
+    model.fit(X, y)
 
-        st.session_state["model"] = model
+    # Select city
+    city = st.selectbox("Select City", data["City"].unique())
 
-# -----------------------------
-# MODEL EVALUATION
-# -----------------------------
-elif page == "📈 Model Evaluation":
+    city_data = data[data["City"] == city].dropna()
 
-    st.title("📈 Model Evaluation")
+    latest = city_data.iloc[-1]
 
-    if "model" in st.session_state:
+    st.subheader("📍 Current Pollution Levels")
+    st.write(latest[features])
 
-        model = st.session_state["model"]
+    st.subheader("⚙️ Adjust Pollution Levels")
 
-        df = data.dropna(subset=["PM2.5", "AQI"])
-        X = df[["PM2.5"]]
-        y = df["AQI"]
+    input_data = {}
 
-        preds = model.predict(X)
+    for col in features:
+        input_data[col] = st.slider(
+            f"{col}",
+            0.0,
+            float(latest[col] * 2),
+            float(latest[col])
+        )
 
-        fig, ax = plt.subplots()
-        ax.scatter(y, preds)
-        ax.set_xlabel("Actual")
-        ax.set_ylabel("Predicted")
+    input_df = pd.DataFrame([input_data])
 
-        st.pyplot(fig)
+    predicted_aqi = model.predict(input_df)[0]
+    original_aqi = latest["AQI"]
 
+    st.subheader("📊 AQI Prediction Result")
+
+    st.metric(
+        label="Predicted AQI",
+        value=round(predicted_aqi, 2),
+        delta=round(predicted_aqi - original_aqi, 2)
+    )
+
+    if predicted_aqi > original_aqi:
+        st.error("⚠️ Air Quality Worsened")
     else:
-        st.warning("Train a model first")
+        st.success("✅ Air Quality Improved")
 
-# -----------------------------
-# PREDICTION
-# -----------------------------
-elif page == "🔮 Prediction":
+    st.subheader("📈 Impact Visualization")
 
-    st.title("🔮 AQI Prediction")
-
-    pm25 = st.slider("PM2.5", 0, 500, 50)
-
-    if "model" in st.session_state:
-        model = st.session_state["model"]
-        pred = model.predict([[pm25]])
-
-        st.metric("Predicted AQI", round(pred[0], 2))
-    else:
-        st.warning("Train model first")
+    fig, ax = plt.subplots()
+    ax.bar(["Original AQI", "Predicted AQI"], [original_aqi, predicted_aqi])
+    st.pyplot(fig)

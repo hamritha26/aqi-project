@@ -64,7 +64,7 @@ with tab2:
             st.line_chart(city_data[features])
 
 # ================= TAB 4: INSIGHTS =================
-with tab4:
+with tab3:
     st.header("📊 Data Insights & Analysis")
 
     # -------- BASIC STATS --------

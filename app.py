@@ -391,7 +391,7 @@ with tab6:
     }).sort_values(by="Importance", ascending=False)
 
     st.bar_chart(importance_df.set_index("Feature"))
-    with tab7:
+with tab7:
     st.header("🧠 SHAP Explainability")
 
     import shap

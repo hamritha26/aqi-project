@@ -359,17 +359,19 @@ with tab7:
         # Sample data
         X_sample = X_test.sample(100, random_state=42)
 
-        # Create explainer
-        explainer = shap.Explainer(rf_model, X_sample)
+        # Use TreeExplainer with fix
+        explainer = shap.TreeExplainer(rf_model)
 
-        # Get SHAP values
-        shap_values = explainer(X_sample)
+        shap_values = explainer.shap_values(
+            X_sample,
+            check_additivity=False   # 🔥 FIX HERE
+        )
 
         # -------- GLOBAL --------
         st.write("### 🌍 Global Feature Importance")
 
-        fig1, ax1 = plt.subplots()
-        shap.plots.bar(shap_values, show=False)
+        fig1 = plt.figure()
+        shap.summary_plot(shap_values, X_sample, show=False)
         st.pyplot(fig1)
 
         # -------- LOCAL --------
@@ -378,11 +380,17 @@ with tab7:
         index = st.slider("Select Sample Index", 0, len(X_sample)-1, 0)
 
         fig2 = plt.figure()
-        shap.plots.waterfall(shap_values[index], show=False)
+        shap.force_plot(
+            explainer.expected_value,
+            shap_values[index],
+            X_sample.iloc[index],
+            matplotlib=True
+        )
         st.pyplot(fig2)
 
     except Exception as e:
         st.error("SHAP Error: " + str(e))
+ 
 
 
 

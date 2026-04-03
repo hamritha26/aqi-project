@@ -119,66 +119,83 @@ with tab3:
     st.success(f"✅ {best_city} has the best air quality")
 
     st.info("PM2.5 and PM10 usually have the highest impact on AQI.")
-
-# ================= TAB 4: PREDICTION =================
-with tab4:
+    # -------- TAB 3: AQI PREDICTION --------
+with tab3:
     st.header("🔮 AQI Prediction Simulator")
 
     st.write("Adjust pollutant levels to predict AQI")
 
-    # Train model on full data
-    model = RandomForestRegressor()
-    model.fit(df[features], df[target])
+    # -------- AQI CATEGORY FUNCTION --------
+    def get_aqi_category(aqi):
+        if aqi <= 50:
+            return "Good 😊"
+        elif aqi <= 100:
+            return "Satisfactory 🙂"
+        elif aqi <= 200:
+            return "Moderate 😐"
+        elif aqi <= 300:
+            return "Poor 😷"
+        elif aqi <= 400:
+            return "Very Poor 🤒"
+        else:
+            return "Severe 🚨"
 
-    city = st.selectbox("Select City for Prediction", data["City"].unique())
+    # -------- CITY SELECTION --------
+    selected_city = st.selectbox(
+        "Select City for Prediction",
+        sorted(df["City"].dropna().unique())
+    )
 
-    city_data = data[data["City"] == city]
-    city_data = city_data.dropna(subset=features + [target])
+    city_data = df[df["City"] == selected_city]
 
     if city_data.empty:
-        st.error("No valid data available for this city")
+        st.warning("No valid data available for this city")
     else:
-        city_data = city_data.sort_values(by="Date")
-        latest = city_data.iloc[-1]
+        st.success(f"Using average values from {selected_city}")
 
-        st.subheader("📍 Current Pollution Levels")
-        st.write(latest[features])
-
-        st.subheader("⚙️ Adjust Pollution Levels")
-
+        # -------- SLIDERS --------
         input_data = {}
 
         for col in features:
+            min_val = float(df[col].min())
+            max_val = float(df[col].max())
+
+            # default = city mean (safe)
+            default_val = city_data[col].mean()
+
+            if pd.isna(default_val):
+                default_val = df[col].mean()
+
+            if pd.isna(default_val):
+                default_val = min_val
+
             input_data[col] = st.slider(
                 col,
-                0.0,
-                float(latest[col] * 2),
-                float(latest[col])
+                min_value=min_val,
+                max_value=max_val,
+                value=float(default_val)
             )
 
-        input_df = pd.DataFrame([input_data])
+        # -------- PREDICT BUTTON --------
+        if st.button("Predict AQI"):
+            try:
+                input_df = pd.DataFrame([input_data])
 
-        predicted_aqi = model.predict(input_df)[0]
-        original_aqi = latest["AQI"]
+                prediction = rf_model.predict(input_df)[0]
 
-        st.subheader("📊 Prediction Result")
+                st.success(f"Predicted AQI: {round(prediction, 2)}")
 
-        st.metric(
-            label="Predicted AQI",
-            value=round(predicted_aqi, 2),
-            delta=round(predicted_aqi - original_aqi, 2)
-        )
+                # -------- CATEGORY --------
+                category = get_aqi_category(prediction)
 
-        if predicted_aqi > original_aqi:
-            st.error("⚠️ Air Quality Worsened")
-        else:
-            st.success("✅ Air Quality Improved")
+                st.markdown(f"### AQI Category: **{category}**")
 
-        st.subheader("📊 Comparison")
+            except Exception as e:
+                st.error("Prediction Error: " + str(e))
+    
 
-        fig, ax = plt.subplots()
-        ax.bar(["Original AQI", "Predicted AQI"], [original_aqi, predicted_aqi])
-        st.pyplot(fig)
+
+      
       
 # ================= TAB 5: CITY COMPARISON =================
 with tab5:

@@ -41,12 +41,8 @@ def train_model(df, features, target):
 rf_model, X_test = train_model(df, features, target)
 
 # ---------------- SHAP ----------------
-@st.cache_resource
-def get_explainer(model):
-    import shap
-    return shap.TreeExplainer(model)
-
-explainer = get_explainer(rf_model)
+import shap
+explainer = shap.TreeExplainer(rf_model)
 
 
 

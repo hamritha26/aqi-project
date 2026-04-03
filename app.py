@@ -350,35 +350,35 @@ with tab6:
 with tab7:
     st.subheader("🧠 SHAP Explainability")
 
-    st.write("Understand how each pollutant affects AQI predictions")
-
     import shap
+    import matplotlib.pyplot as plt
 
-    # Use Random Forest for SHAP
-    model = rf_model   # make sure rf_model is already trained
-
-    X_sample = X_test.sample(100)  # small sample for speed
+    st.info("SHAP explains how each pollutant affects AQI predictions")
 
     try:
-        explainer = shap.TreeExplainer(model)
-        shap_values = explainer.shap_values(X_sample)
+        # Sample data
+        X_sample = X_test.sample(100, random_state=42)
 
+        # Create explainer
+        explainer = shap.Explainer(rf_model, X_sample)
+
+        # Get SHAP values
+        shap_values = explainer(X_sample)
+
+        # -------- GLOBAL --------
         st.write("### 🌍 Global Feature Importance")
-        fig1 = plt.figure()
-        shap.summary_plot(shap_values, X_sample, show=False)
+
+        fig1, ax1 = plt.subplots()
+        shap.plots.bar(shap_values, show=False)
         st.pyplot(fig1)
 
+        # -------- LOCAL --------
         st.write("### 🔍 Single Prediction Explanation")
+
         index = st.slider("Select Sample Index", 0, len(X_sample)-1, 0)
 
         fig2 = plt.figure()
-        shap.waterfall_plot(
-            shap.Explanation(
-                values=shap_values[index],
-                base_values=explainer.expected_value,
-                data=X_sample.iloc[index]
-            )
-        )
+        shap.plots.waterfall(shap_values[index], show=False)
         st.pyplot(fig2)
 
     except Exception as e:

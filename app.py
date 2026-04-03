@@ -24,12 +24,13 @@ target = "AQI"
 df = data.dropna(subset=features + [target])
 
 # ---------------- TABS ----------------
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📊 Overview",
-    "🏙 City Analysis",
-    "🤖 ML Model",
-    "🔮 Prediction",
-    "🌆 City Comparison"
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "🌍 Overview",
+    "🏙️ City Analysis",
+    "📊 Insights",
+    "🧪 Prediction",
+    "🌆 Compare Cities",
+    "🧠 ML + SHAP"
 ])
 # ================= TAB 1: OVERVIEW =================
 with tab1:
@@ -62,30 +63,60 @@ with tab2:
         with st.expander("🌫 Show Pollutant Levels"):
             st.line_chart(city_data[features])
 
-# ================= TAB 3: ML MODEL =================
-with tab3:
-    st.header("🤖 Model Training & Evaluation")
+# ================= TAB 4: INSIGHTS =================
+with tab4:
+    st.header("📊 Data Insights & Analysis")
 
-    X = df[features]
-    y = df[target]
+    # -------- BASIC STATS --------
+    st.subheader("📈 Dataset Overview")
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+    st.write("Total Records:", len(data))
+    st.write("Total Cities:", data["City"].nunique())
 
-    model = RandomForestRegressor()
-    model.fit(X_train, y_train)
+    # -------- AQI DISTRIBUTION --------
+    st.subheader("📊 AQI Distribution")
 
-    preds = model.predict(X_test)
-    score = r2_score(y_test, preds)
-
-    st.subheader("📊 Model Performance")
-    st.success(f"R² Score: {score:.2f}")
-
-    st.subheader("📈 Actual vs Predicted")
     fig, ax = plt.subplots()
-    ax.scatter(y_test, preds)
-    ax.set_xlabel("Actual AQI")
-    ax.set_ylabel("Predicted AQI")
+    data["AQI"].hist(ax=ax)
+    ax.set_title("AQI Distribution")
     st.pyplot(fig)
+
+    # -------- CORRELATION --------
+    st.subheader("🔗 Correlation Between Pollutants")
+
+    corr = data[features + ["AQI"]].corr()
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(corr)
+
+    ax.set_xticks(range(len(corr.columns)))
+    ax.set_yticks(range(len(corr.columns)))
+    ax.set_xticklabels(corr.columns, rotation=45)
+    ax.set_yticklabels(corr.columns)
+
+    st.pyplot(fig)
+
+    # -------- TOP POLLUTED CITIES --------
+    st.subheader("🏭 Most Polluted Cities")
+
+    city_aqi = data.groupby("City")["AQI"].mean().sort_values(ascending=False)
+    st.bar_chart(city_aqi.head(10))
+
+    # -------- CLEANEST CITIES --------
+    st.subheader("🌿 Cleanest Cities")
+
+    st.bar_chart(city_aqi.tail(10))
+
+    # -------- INSIGHT TEXT --------
+    st.subheader("🧠 Key Insights")
+
+    worst_city = city_aqi.idxmax()
+    best_city = city_aqi.idxmin()
+
+    st.error(f"⚠️ {worst_city} is the most polluted city")
+    st.success(f"✅ {best_city} has the best air quality")
+
+    st.info("PM2.5 and PM10 usually have the highest impact on AQI.")
 
 # ================= TAB 4: PREDICTION =================
 with tab4:
@@ -238,6 +269,117 @@ with tab5:
         highest = avg_pollutant.idxmax()
 
         st.warning(f"⚠️ {highest} has highest {pollutant} levels")
+        # ================= TAB 6: ML MODELS =================
+with tab6:
+    st.header("🤖 Machine Learning Models & Comparison")
+
+    from sklearn.model_selection import train_test_split
+    from sklearn.linear_model import LinearRegression
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.tree import DecisionTreeRegressor
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+    import numpy as np
+    import pandas as pd
+
+    # -------- DATA --------
+    X = data[features].fillna(0)
+    y = data["AQI"].fillna(0)
+
+    # -------- SPLIT --------
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
+
+    st.subheader("📊 Data Split")
+    st.write(f"Training: {len(X_train)}")
+    st.write(f"Testing: {len(X_test)}")
+
+    # -------- MODELS --------
+    models = {
+        "Linear Regression": LinearRegression(),
+        "Decision Tree": DecisionTreeRegressor(),
+        "Random Forest": RandomForestRegressor(n_estimators=50)
+    }
+
+    results = {}
+
+    st.subheader("⚙️ Training & Evaluation")
+
+    for name, model in models.items():
+        model.fit(X_train, y_train)
+        preds = model.predict(X_test)
+
+        mae = mean_absolute_error(y_test, preds)
+        rmse = np.sqrt(mean_squared_error(y_test, preds))
+        r2 = r2_score(y_test, preds)
+
+        results[name] = {"MAE": mae, "RMSE": rmse, "R2": r2}
+
+        st.write(f"### {name}")
+        st.write(f"MAE: {mae:.2f}")
+        st.write(f"RMSE: {rmse:.2f}")
+        st.write(f"R² Score: {r2:.2f}")
+        st.markdown("---")
+
+    # -------- COMPARISON --------
+    st.subheader("🏆 Model Comparison")
+
+    results_df = pd.DataFrame(results).T
+    st.dataframe(results_df)
+
+    st.bar_chart(results_df["R2"])
+
+    best_model = results_df["R2"].idxmax()
+    st.success(f"✅ Best Model: {best_model}")
+
+    # -------- FEATURE IMPORTANCE --------
+    st.subheader("📌 Feature Importance (Random Forest)")
+
+    rf_model = models["Random Forest"]
+    importance = rf_model.feature_importances_
+
+    importance_df = pd.DataFrame({
+        "Feature": features,
+        "Importance": importance
+    }).sort_values(by="Importance", ascending=False)
+
+    st.bar_chart(importance_df.set_index("Feature"))
+
+    # -------- SHAP --------
+    st.subheader("🧠 SHAP Explanation")
+
+    import shap
+
+    sample = X_test.sample(100)
+    explainer = shap.Explainer(rf_model, sample)
+    shap_values = explainer(sample)
+
+    st.write("### Feature Impact")
+
+    fig, ax = plt.subplots()
+    shap.plots.bar(shap_values, show=False)
+    st.pyplot(fig)
+
+    # -------- SINGLE PREDICTION --------
+    st.subheader("🔍 Single Prediction Explanation")
+
+    single = X_test.iloc[[0]]
+    shap_single = explainer(single)
+
+    fig, ax = plt.subplots()
+    shap.plots.waterfall(shap_single[0], show=False)
+    st.pyplot(fig)
+
+    # -------- EXPLANATION --------
+    st.subheader("📖 Explanation")
+
+    st.info("""
+    🔹 Linear Regression: Simple linear relationship  
+    🔹 Decision Tree: Rule-based model  
+    🔹 Random Forest: More accurate ensemble model  
+
+    🔹 SHAP explains how each pollutant affects AQI prediction  
+    """)
 
 
   

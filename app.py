@@ -146,7 +146,8 @@ with tab4:
         fig, ax = plt.subplots()
         ax.bar(["Original AQI", "Predicted AQI"], [original_aqi, predicted_aqi])
         st.pyplot(fig)
-        # ================= TAB 5: CITY COMPARISON =================
+      
+# ================= TAB 5: CITY COMPARISON =================
 with tab5:
     st.header("🌆 City Comparison Analysis")
 
@@ -157,37 +158,87 @@ with tab5:
 
     if len(selected_cities) < 2:
         st.warning("Please select at least 2 cities")
+
     else:
         compare_data = data[data["City"].isin(selected_cities)]
 
+        # -------- AQI COMPARISON --------
         st.subheader("📊 AQI Comparison")
 
         fig, ax = plt.subplots()
-
         colors = ["red", "blue", "green", "orange", "purple", "brown"]
 
-for i, city in enumerate(selected_cities):
-    city_df = compare_data[compare_data["City"] == city]
-    ax.plot(city_df["AQI"], label=city, color=colors[i % len(colors)])
+        for i, city in enumerate(selected_cities):
+            city_df = compare_data[compare_data["City"] == city]
+            ax.plot(city_df["AQI"], label=city, color=colors[i % len(colors)])
 
         ax.set_title("AQI Comparison Between Cities")
         ax.legend()
         st.pyplot(fig)
 
+        # -------- AVERAGE AQI --------
         st.subheader("📈 Average AQI Comparison")
 
         avg_aqi = compare_data.groupby("City")["AQI"].mean()
         st.bar_chart(avg_aqi)
 
-        with st.expander("🌫 Compare Pollutants"):
-            pollutant = st.selectbox("Select Pollutant", features)
+        # -------- AQI CATEGORY FUNCTION --------
+        def aqi_category(aqi):
+            if aqi <= 50:
+                return "🟢 Good"
+            elif aqi <= 100:
+                return "🟡 Satisfactory"
+            elif aqi <= 200:
+                return "🟠 Moderate"
+            elif aqi <= 300:
+                return "🔴 Poor"
+            elif aqi <= 400:
+                return "🟣 Very Poor"
+            else:
+                return "⚫ Severe"
 
-            fig, ax = plt.subplots()
+        # -------- SHOW CATEGORY --------
+        st.subheader("🌫 AQI Category by City")
 
-           for i, city in enumerate(selected_cities):
-    city_df = compare_data[compare_data["City"] == city]
-    ax.plot(city_df[pollutant], label=city, color=colors[i % len(colors)])
+        for city in avg_aqi.index:
+            st.info(f"{city}: {aqi_category(avg_aqi[city])}")
 
-            ax.set_title(f"{pollutant} Comparison")
-            ax.legend()
-            st.pyplot(fig)
+        # -------- INSIGHTS --------
+        st.subheader("🧠 Insights")
+
+        best_city = avg_aqi.idxmin()
+        worst_city = avg_aqi.idxmax()
+
+        st.success(f"✅ {best_city} has the best air quality")
+        st.error(f"⚠️ {worst_city} has the worst air quality")
+
+        # -------- RANKING --------
+        st.subheader("🏆 City Ranking")
+
+        ranking = avg_aqi.sort_values()
+        st.dataframe(ranking)
+
+        # -------- POLLUTANT COMPARISON --------
+        st.subheader("🌫 Pollutant Comparison")
+
+        pollutant = st.selectbox("Select Pollutant", features)
+
+        fig2, ax2 = plt.subplots()
+
+        for i, city in enumerate(selected_cities):
+            city_df = compare_data[compare_data["City"] == city]
+            ax2.plot(city_df[pollutant], label=city, color=colors[i % len(colors)])
+
+        ax2.set_title(f"{pollutant} Comparison")
+        ax2.legend()
+        st.pyplot(fig2)
+
+        # -------- EXTRA INSIGHT --------
+        avg_pollutant = compare_data.groupby("City")[pollutant].mean()
+        highest = avg_pollutant.idxmax()
+
+        st.warning(f"⚠️ {highest} has highest {pollutant} levels")
+
+
+  
+

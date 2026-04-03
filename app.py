@@ -22,6 +22,37 @@ features = ["PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3", "Tolu
 target = "AQI"
 
 df = data.dropna(subset=features + [target])
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(page_title="AQI Dashboard", layout="wide")
+
+st.title("🌍 Urban AQI Analysis & Prediction Dashboard")
+
+# ---------------- LOAD DATA ----------------
+@st.cache_data
+def load_data():
+    return pd.read_csv("city_day.csv")
+
+data = load_data()
+
+# ---------------- FEATURES ----------------
+features = ["PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3", "Toluene"]
+target = "AQI"
+
+df = data.dropna(subset=features + [target])
+
+# ================= ADD MODEL HERE 🔥 =================
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+
+X = df[features]
+y = df[target]
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
+rf_model.fit(X_train, y_train)
 
 # ---------------- TABS ----------------
 tab1, tab2, tab3, tab4, tab5, tab6 , tab7= st.tabs([

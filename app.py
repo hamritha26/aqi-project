@@ -391,50 +391,75 @@ with tab6:
     }).sort_values(by="Importance", ascending=False)
 
     st.bar_chart(importance_df.set_index("Feature"))
-    # -------- TAB 7: SHAP --------
-with tab7:
-    st.subheader("🧠 SHAP Explainability")
+    with tab7:
+    st.header("🧠 SHAP Explainability")
 
     import shap
     import matplotlib.pyplot as plt
+    import streamlit.components.v1 as components
 
-    st.info("SHAP explains how each pollutant affects AQI predictions")
+    # ---------------- EXPLAINER ----------------
+    explainer = shap.TreeExplainer(rf_model)
+
+    # ---------------- SAMPLE SELECTION ----------------
+    st.subheader("🔍 Select Data Sample")
+    sample_index = st.slider("Select Sample Index", 0, len(X_test)-1, 0)
+
+    sample = X_test.iloc[sample_index:sample_index+1]
+
+    # ---------------- SHAP VALUES ----------------
+    shap_values = explainer.shap_values(sample, check_additivity=False)
+
+    # =========================
+    # 🔥 1. WATERFALL (LOCAL)
+    # =========================
+    st.subheader("📊 Single Prediction Explanation (Waterfall)")
 
     try:
-        # Sample data
-        X_sample = X_test.sample(100, random_state=42)
-
-        # Use TreeExplainer with fix
-        explainer = shap.TreeExplainer(rf_model)
-
-        shap_values = explainer.shap_values(
-            X_sample,
-            check_additivity=False   # 🔥 FIX HERE
+        shap.plots.waterfall(
+            shap.Explanation(
+                values=shap_values[0],
+                base_values=explainer.expected_value,
+                data=sample.iloc[0],
+                feature_names=features
+            )
         )
-
-        # -------- GLOBAL --------
-        st.write("### 🌍 Global Feature Importance")
-
-        fig1 = plt.figure()
-        shap.summary_plot(shap_values, X_sample, show=False)
-        st.pyplot(fig1)
-
-        # -------- LOCAL --------
-        st.write("### 🔍 Single Prediction Explanation")
-
-        index = st.slider("Select Sample Index", 0, len(X_sample)-1, 0)
-
-        fig2 = plt.figure()
-        shap.force_plot(
-            explainer.expected_value,
-            shap_values[index],
-            X_sample.iloc[index],
-            matplotlib=True
-        )
-        st.pyplot(fig2)
-
+        st.pyplot(plt.gcf())
+        plt.clf()
     except Exception as e:
-        st.error("SHAP Error: " + str(e))
+        st.error(f"Waterfall Error: {e}")
+
+    # =========================
+    # 🔥 2. INTERACTIVE FORCE PLOT
+    # =========================
+    st.subheader("⚡ Interactive SHAP Force Plot")
+
+    try:
+        shap_html = shap.force_plot(
+            explainer.expected_value,
+            shap_values[0],
+            sample,
+            feature_names=features
+        )
+
+        components.html(shap_html.html(), height=300)
+    except Exception as e:
+        st.error(f"Force Plot Error: {e}")
+
+    # =========================
+    # 🔥 3. GLOBAL SUMMARY
+    # =========================
+    st.subheader("🌍 Global Feature Importance")
+
+    try:
+        shap_values_full = explainer.shap_values(X_test, check_additivity=False)
+
+        shap.summary_plot(shap_values_full, X_test)
+        st.pyplot(plt.gcf())
+        plt.clf()
+    except Exception as e:
+        st.error(f"Summary Plot Error: {e}")
+
  
 
 

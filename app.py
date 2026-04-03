@@ -24,13 +24,15 @@ target = "AQI"
 df = data.dropna(subset=features + [target])
 
 # ---------------- TABS ----------------
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 , tab7= st.tabs([
     "🌍 Overview",
     "🏙️ City Analysis",
     "📊 Insights",
     "🧪 Prediction",
     "🌆 Compare Cities",
-    "🧠 ML + SHAP"
+    "🤖 ML Models",
+    "🧠 SHAP"
+    
 ])
 # ================= TAB 1: OVERVIEW =================
 with tab1:
@@ -344,6 +346,43 @@ with tab6:
     }).sort_values(by="Importance", ascending=False)
 
     st.bar_chart(importance_df.set_index("Feature"))
+    # -------- TAB 7: SHAP --------
+with tab7:
+    st.subheader("🧠 SHAP Explainability")
+
+    st.write("Understand how each pollutant affects AQI predictions")
+
+    import shap
+
+    # Use Random Forest for SHAP
+    model = rf_model   # make sure rf_model is already trained
+
+    X_sample = X_test.sample(100)  # small sample for speed
+
+    try:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(X_sample)
+
+        st.write("### 🌍 Global Feature Importance")
+        fig1 = plt.figure()
+        shap.summary_plot(shap_values, X_sample, show=False)
+        st.pyplot(fig1)
+
+        st.write("### 🔍 Single Prediction Explanation")
+        index = st.slider("Select Sample Index", 0, len(X_sample)-1, 0)
+
+        fig2 = plt.figure()
+        shap.waterfall_plot(
+            shap.Explanation(
+                values=shap_values[index],
+                base_values=explainer.expected_value,
+                data=X_sample.iloc[index]
+            )
+        )
+        st.pyplot(fig2)
+
+    except Exception as e:
+        st.error("SHAP Error: " + str(e))
 
 
 

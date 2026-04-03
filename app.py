@@ -5,10 +5,7 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
-# ---------------- PAGE CONFIG ----------------
-st.set_page_config(page_title="AQI Dashboard", layout="wide")
 
-st.title("🌍 Urban AQI Analysis & Prediction Dashboard")
 
 # ---------------- LOAD DATA ----------------
 @st.cache_data

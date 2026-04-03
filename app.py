@@ -345,30 +345,31 @@ with tab6:
 
     st.bar_chart(importance_df.set_index("Feature"))
 
-    # -------- SHAP --------
-    st.subheader("🧠 SHAP Explanation")
+   # -------- SHAP --------
+st.subheader("🧠 SHAP Explanation")
 
-    import shap
+import shap
 
-    sample = X_test.sample(100)
-    explainer = shap.Explainer(rf_model, sample)
-    shap_values = explainer(sample)
+sample = X_test.sample(100)
+explainer = shap.Explainer(rf_model, sample)
 
-    st.write("### Feature Impact")
+shap_values = explainer(sample, check_additivity=False)
 
-    fig, ax = plt.subplots()
-    shap.plots.bar(shap_values, show=False)
-    st.pyplot(fig)
+fig, ax = plt.subplots()
+shap.plots.bar(shap_values, show=False)
+st.pyplot(fig)
 
-    # -------- SINGLE PREDICTION --------
-    st.subheader("🔍 Single Prediction Explanation")
+# -------- SINGLE PREDICTION --------
+st.subheader("🔍 Single Prediction Explanation")
 
-    single = X_test.iloc[[0]]
-    shap_single = explainer(single)
+single = X_test.iloc[[0]]
+shap_single = explainer(single, check_additivity=False)
 
-    fig, ax = plt.subplots()
-    shap.plots.waterfall(shap_single[0], show=False)
-    st.pyplot(fig)
+fig, ax = plt.subplots()
+shap.plots.waterfall(shap_single[0], show=False)
+st.pyplot(fig)
+
+
 
     # -------- EXPLANATION --------
     st.subheader("📖 Explanation")

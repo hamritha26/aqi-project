@@ -120,7 +120,7 @@ with tab3:
 
     st.info("PM2.5 and PM10 usually have the highest impact on AQI.")
     # -------- TAB 3: AQI PREDICTION --------
-with tab3:
+with tab4:
     st.header("🔮 AQI Prediction Simulator")
 
     st.write("Adjust pollutant levels to predict AQI")

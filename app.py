@@ -4,21 +4,6 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
-
-
-
-# ---------------- LOAD DATA ----------------
-@st.cache_data
-def load_data():
-    return pd.read_csv("city_day.csv")
-
-data = load_data()
-
-# ---------------- FEATURES ----------------
-features = ["PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3", "Toluene"]
-target = "AQI"
-
-df = data.dropna(subset=features + [target])
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="AQI Dashboard", layout="wide")
 
@@ -35,21 +20,44 @@ data = load_data()
 features = ["PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3", "Toluene"]
 target = "AQI"
 
+# ---------------- CLEAN DATA ----------------
 df = data.dropna(subset=features + [target])
 
-# ================= ADD MODEL HERE 🔥 =================
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
+# ---------------- MODEL ----------------
+@st.cache_resource
+def train_model(df, features, target):
+    X = df[features]
+    y = df[target]
 
-X = df[features]
-y = df[target]
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+    model = RandomForestRegressor(n_estimators=50, random_state=42)
+    model.fit(X_train, y_train)
 
-rf_model = RandomForestRegressor(n_estimators=100, random_state=42)
-rf_model.fit(X_train, y_train)
+    return model, X_test
+
+rf_model, X_test = train_model(df, features, target)
+
+# ---------------- SHAP ----------------
+@st.cache_resource
+def get_explainer(model):
+    import shap
+    return shap.TreeExplainer(model)
+
+explainer = get_explainer(rf_model)
+
+
+
+
+
+
+
+
+
+
+
 
 # ---------------- TABS ----------------
 tab1, tab2, tab3, tab4, tab5, tab6 , tab7= st.tabs([

@@ -409,25 +409,29 @@ with tab7:
 
     # ---------------- SHAP VALUES ----------------
     shap_values = explainer.shap_values(sample, check_additivity=False)
-
-    # =========================
-    # 🔥 1. WATERFALL (LOCAL)
-    # =========================
+    # ---------------- WATERFALL FIX ----------------
     st.subheader("📊 Single Prediction Explanation (Waterfall)")
 
     try:
+    # ✅ Convert to 1D properly
+        shap_val = shap_values[0] if isinstance(shap_values, list) else shap_values
+
         shap.plots.waterfall(
             shap.Explanation(
-                values=shap_values[0],
-                base_values=explainer.expected_value,
-                data=sample.iloc[0],
-                feature_names=features
+              values=shap_val[0],   # ✅ FIX HERE
+              base_values=explainer.expected_value,
+              data=sample.iloc[0].values,   # ✅ FIX HERE
+              feature_names=features
             )
         )
+
         st.pyplot(plt.gcf())
         plt.clf()
+
     except Exception as e:
-        st.error(f"Waterfall Error: {e}")
+         st.error(f"Waterfall Error: {e}")
+
+   
 
     # =========================
     # 🔥 2. INTERACTIVE FORCE PLOT
